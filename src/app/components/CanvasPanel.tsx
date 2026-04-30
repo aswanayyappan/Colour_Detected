@@ -7,7 +7,7 @@ interface CanvasPanelProps {
     onClear: () => void;
 }
 
-type Mode = 'idle' | 'image' | 'live' | 'captured';
+type Mode = 'idle' | 'image' | 'live';
 
 export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: CanvasPanelProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,7 +17,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
     const magWrapRef = useRef<HTMLDivElement>(null);
 
     const [mode, setMode] = useState<Mode>('idle');
-    const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const requestRef = useRef<number>();
     const streamRef = useRef<MediaStream>();
     const lastTimeRef = useRef<number>(0);
@@ -31,12 +30,13 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
             cancelAnimationFrame(requestRef.current);
             requestRef.current = undefined;
         }
+        if (videoRef.current) {
+            videoRef.current.style.display = 'none';
+        }
     };
 
     useEffect(() => {
-        return () => {
-            stopCamera();
-        };
+        return () => { stopCamera(); };
     }, []);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,12 +51,10 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                 if (!cvs) return;
                 cvs.width = img.width;
                 cvs.height = img.height;
+                cvs.style.display = 'block';
                 const ctx = cvs.getContext('2d', { willReadFrequently: true });
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                }
+                if (ctx) ctx.drawImage(img, 0, 0);
                 setMode('image');
-                setCapturedImage(null);
                 if (magWrapRef.current) magWrapRef.current.style.display = 'none';
             };
             img.src = evt.target?.result as string;
@@ -65,36 +63,10 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         e.target.value = '';
     };
 
-    const toggleCamera = async () => {
-        if (mode === 'live') {
-            stopCamera();
-            setMode('idle');
-            if (canvasRef.current) {
-                const ctx = canvasRef.current.getContext('2d');
-                ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
-        } else {
-            stopCamera();
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                streamRef.current = stream;
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.play();
-                }
-                setMode('live');
-                setCapturedImage(null);
-                drawCameraToCanvas();
-            } catch(err) {
-                alert("Camera access denied or unavailable.");
-            }
-        }
-    };
-
-    const drawCameraToCanvas = () => {
-        if (!videoRef.current || !canvasRef.current) return;
+    const drawCameraLoop = () => {
         const video = videoRef.current;
         const cvs = canvasRef.current;
+        if (!video || !cvs) return;
         const ctx = cvs.getContext('2d', { willReadFrequently: true });
         if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth) {
             if (cvs.width !== video.videoWidth || cvs.height !== video.videoHeight) {
@@ -103,30 +75,38 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
             }
             ctx?.drawImage(video, 0, 0, cvs.width, cvs.height);
         }
-        requestRef.current = requestAnimationFrame(drawCameraToCanvas);
+        requestRef.current = requestAnimationFrame(drawCameraLoop);
     };
 
-    const captureFrame = () => {
-        if (mode !== 'live' || !canvasRef.current) return;
-        
-        if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-            const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
-            ctx?.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+    const toggleCamera = async () => {
+        if (mode === 'live') {
+            stopCamera();
+            const cvs = canvasRef.current;
+            if (cvs) {
+                const ctx = cvs.getContext('2d');
+                ctx?.clearRect(0, 0, cvs.width, cvs.height);
+                cvs.style.display = 'none';
+            }
+            setMode('idle');
+        } else {
+            stopCamera();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                streamRef.current = stream;
+                const video = videoRef.current;
+                if (video) {
+                    video.srcObject = stream;
+                    video.style.display = 'none'; // keep hidden, draw to canvas
+                    await video.play();
+                }
+                const cvs = canvasRef.current;
+                if (cvs) cvs.style.display = 'block';
+                setMode('live');
+                drawCameraLoop();
+            } catch {
+                alert('Camera access denied or unavailable.');
+            }
         }
-
-        stopCamera();
-        
-        const imageDataUrl = canvasRef.current.toDataURL("image/png");
-        setCapturedImage(imageDataUrl);
-        setMode('captured');
-    };
-
-    const downloadImage = () => {
-        if (!capturedImage) return;
-        const link = document.createElement('a');
-        link.href = capturedImage;
-        link.download = 'captured-color-frame.png';
-        link.click();
     };
 
     const getCoords = (e: React.MouseEvent | React.TouchEvent) => {
@@ -135,8 +115,7 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         const cvs = canvasRef.current;
         const scaleX = cvs.width / rect.width;
         const scaleY = cvs.height / rect.height;
-        
-        let clientX, clientY;
+        let clientX: number, clientY: number;
         if ('touches' in e) {
             clientX = (e as React.TouchEvent).touches[0].clientX;
             clientY = (e as React.TouchEvent).touches[0].clientY;
@@ -144,7 +123,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
             clientX = (e as React.MouseEvent).clientX;
             clientY = (e as React.MouseEvent).clientY;
         }
-
         return {
             x: Math.floor((clientX - rect.left) * scaleX),
             y: Math.floor((clientY - rect.top) * scaleY),
@@ -155,7 +133,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
 
     const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
         if (mode === 'idle') return;
-        
         const now = Date.now();
         if (now - lastTimeRef.current < 32) return;
         lastTimeRef.current = now;
@@ -163,41 +140,34 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         const coords = getCoords(e);
         if (!coords) return;
         const { x, y, px, py } = coords;
-        
         const cvs = canvasRef.current;
         const ctx = cvs?.getContext('2d', { willReadFrequently: true });
         if (!ctx || !cvs) return;
-        
         if (x < 0 || y < 0 || x >= cvs.width || y >= cvs.height) return;
 
         const data = ctx.getImageData(x, y, 1, 1).data;
         const r = data[0], g = data[1], b = data[2];
-        
         const hex = rgbToHex(r, g, b);
         const [h, s, l] = rgbToHsl(r, g, b);
         const name = nearestColorName(r, g, b);
-
         onColorDetected({ r, g, b, hex, h, s, l, name });
 
+        // Draw magnifier
         const magCvs = magCanvasRef.current;
         const magWrap = magWrapRef.current;
         if (magCvs && magWrap) {
             const magCtx = magCvs.getContext('2d');
             if (magCtx) {
-                const mag = 6;
-                const size = 80;
+                const mag = 6, size = 80;
                 magCvs.width = size;
                 magCvs.height = size;
                 magCtx.imageSmoothingEnabled = false;
-                
                 const sx = x - Math.floor(size / mag / 2);
                 const sy = y - Math.floor(size / mag / 2);
-                magCtx.drawImage(cvs, sx, sy, size/mag, size/mag, 0, 0, size, size);
-
+                magCtx.drawImage(cvs, sx, sy, size / mag, size / mag, 0, 0, size, size);
                 magWrap.style.display = 'block';
-                const mw = 80, mh = 80;
-                let left = px - mw/2;
-                let top = py - mh - 15;
+                let left = px - 40;
+                let top = py - 95;
                 if (top < 5) top = py + 15;
                 magWrap.style.left = left + 'px';
                 magWrap.style.top = top + 'px';
@@ -211,23 +181,23 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
 
     const handleClear = () => {
         stopCamera();
-        setMode('idle');
-        setCapturedImage(null);
         const cvs = canvasRef.current;
         if (cvs) {
             const ctx = cvs.getContext('2d');
             ctx?.clearRect(0, 0, cvs.width, cvs.height);
+            cvs.style.display = 'none';
         }
         if (magWrapRef.current) magWrapRef.current.style.display = 'none';
+        setMode('idle');
         onClear();
     };
 
     return (
         <div className="panel">
             <div className="panel-label">// image source</div>
-            <div 
-                className="canvas-wrap" 
-                id="canvas-wrap" 
+            <div
+                className="canvas-wrap"
+                id="canvas-wrap"
                 ref={wrapRef}
                 onMouseMove={handleMove}
                 onTouchMove={(e) => { e.preventDefault(); handleMove(e); }}
@@ -235,9 +205,9 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                 onClick={onColorClick}
                 onTouchEnd={() => { handleLeave(); onColorClick(); }}
             >
-                <canvas id="main-canvas" ref={canvasRef} style={{ display: mode === 'idle' ? 'none' : 'block' }}></canvas>
-                <video id="video-element" ref={videoRef} playsInline muted style={{ display: 'none' }}></video>
-                
+                <canvas id="main-canvas" ref={canvasRef} style={{ display: 'none' }}></canvas>
+                <video id="video-element" ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }}></video>
+
                 {mode === 'idle' && (
                     <div className="canvas-placeholder" id="placeholder">
                         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -253,37 +223,22 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                     <canvas id="mag-canvas" ref={magCanvasRef}></canvas>
                     <div className="crosshair"></div>
                 </div>
-                
-                {mode === 'live' && (
-                    <div className="mode-badge" id="mode-badge" style={{ display: 'block' }}>live</div>
-                )}
-                {mode === 'captured' && (
-                    <div className="mode-badge" id="mode-badge" style={{ display: 'block', background: 'var(--accent)', color: '#000' }}>captured</div>
-                )}
+
+                <div className="mode-badge" id="mode-badge" style={{ display: mode === 'live' ? 'block' : 'none' }}>live</div>
             </div>
-            
+
             <div className="controls">
                 <label htmlFor="file-input">
                     <button className="primary" onClick={() => document.getElementById('file-input')?.click()}>Upload</button>
                 </label>
                 <input type="file" id="file-input" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-                
-                <button 
-                    id="camera-btn" 
-                    className={mode === 'live' ? 'primary' : ''} 
+                <button
+                    id="camera-btn"
+                    className={mode === 'live' ? 'primary' : ''}
                     onClick={toggleCamera}
                 >
                     Camera
                 </button>
-
-                {mode === 'live' && (
-                    <button className="primary" onClick={captureFrame}>Capture</button>
-                )}
-
-                {mode === 'captured' && capturedImage && (
-                    <button className="primary" onClick={downloadImage}>Download</button>
-                )}
-
                 <button onClick={handleClear}>Clear</button>
             </div>
         </div>

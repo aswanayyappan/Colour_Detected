@@ -9,14 +9,11 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-
-
 .app-container {
   background: var(--bg);
   color: var(--text);
   font-family: 'DM Mono', monospace;
   min-height: 100vh;
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -184,6 +181,8 @@ button.primary:hover {
   color: #000;
 }
 
+#file-input { display: none; }
+
 /* Color Output Panel */
 .color-swatch-large {
   width: 100%;
@@ -343,6 +342,7 @@ button.primary:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: none;
 }
 
 .mode-badge {

@@ -1,3 +1,4 @@
+/* 1. Tailwind resets and utilities — loaded first */
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';

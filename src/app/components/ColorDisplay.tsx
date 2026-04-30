@@ -10,20 +10,21 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
     const handleCopy = (type: string, val: string) => {
+        if (!val) return;
         onCopy(val);
         setCopiedField(type);
         setTimeout(() => setCopiedField(null), 1500);
     };
 
-    const r = color?.r || 0;
-    const g = color?.g || 0;
-    const b = color?.b || 0;
-    const h = color?.h || 0;
-    const s = color?.s || 0;
-    const l = color?.l || 0;
-    const hex = color?.hex || '#1a1a1a';
-    const name = color?.name || '';
-    
+    const r = color?.r ?? 0;
+    const g = color?.g ?? 0;
+    const b = color?.b ?? 0;
+    const h = color?.h ?? 0;
+    const s = color?.s ?? 0;
+    const l = color?.l ?? 0;
+    const hex = color?.hex ?? '#1a1a1a';
+    const name = color?.name ?? '';
+
     const isLight = l > 55;
     const nameColor = color ? (isLight ? '#000' : '#fff') : 'transparent';
 
@@ -34,7 +35,7 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
     return (
         <div className="panel">
             <div className="panel-label">detected colour</div>
-            
+
             <div className="color-swatch-large" id="swatch" style={{ background: hex }}>
                 <div className="swatch-overlay">
                     <div className="color-name-display" id="color-name" style={{ color: nameColor }}>
@@ -42,7 +43,7 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
                     </div>
                 </div>
             </div>
-            
+
             <div className="values-grid">
                 <div className="value-row">
                     <span className="value-label">R</span>
@@ -51,7 +52,6 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
                     </div>
                     <span className="value-num" id="val-r">{color ? r : ''}</span>
                 </div>
-                
                 <div className="value-row">
                     <span className="value-label">G</span>
                     <div className="value-bar-wrap">
@@ -59,7 +59,6 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
                     </div>
                     <span className="value-num" id="val-g">{color ? g : ''}</span>
                 </div>
-                
                 <div className="value-row">
                     <span className="value-label">B</span>
                     <div className="value-bar-wrap">
@@ -67,7 +66,6 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
                     </div>
                     <span className="value-num" id="val-b">{color ? b : ''}</span>
                 </div>
-                
                 <div className="value-row">
                     <span className="value-label">H</span>
                     <div className="value-bar-wrap">
@@ -76,32 +74,33 @@ export default function ColorDisplay({ color, onCopy }: ColorDisplayProps) {
                     <span className="value-num" id="val-h">{color ? `${h}°` : ''}</span>
                 </div>
             </div>
-            
+
             <div className="copy-fields">
-                <div 
-                    className={`copy-field ${copiedField === 'hex' ? 'copied' : ''}`}
-                    onClick={() => color && handleCopy('hex', dispHex)}
+                <div
+                    className={`copy-field${copiedField === 'hex' ? ' copied' : ''}`}
+                    id="copy-hex"
+                    onClick={() => handleCopy('hex', dispHex)}
                 >
                     <span className="copy-field-label">HEX</span>
-                    <span className="copy-field-value">{dispHex}</span>
+                    <span className="copy-field-value" id="disp-hex">{dispHex}</span>
                     <span className="copy-icon"></span>
                 </div>
-                
-                <div 
-                    className={`copy-field ${copiedField === 'rgb' ? 'copied' : ''}`}
-                    onClick={() => color && handleCopy('rgb', dispRgb)}
+                <div
+                    className={`copy-field${copiedField === 'rgb' ? ' copied' : ''}`}
+                    id="copy-rgb"
+                    onClick={() => handleCopy('rgb', dispRgb)}
                 >
                     <span className="copy-field-label">RGB</span>
-                    <span className="copy-field-value">{dispRgb}</span>
+                    <span className="copy-field-value" id="disp-rgb">{dispRgb}</span>
                     <span className="copy-icon"></span>
                 </div>
-                
-                <div 
-                    className={`copy-field ${copiedField === 'hsl' ? 'copied' : ''}`}
-                    onClick={() => color && handleCopy('hsl', dispHsl)}
+                <div
+                    className={`copy-field${copiedField === 'hsl' ? ' copied' : ''}`}
+                    id="copy-hsl"
+                    onClick={() => handleCopy('hsl', dispHsl)}
                 >
                     <span className="copy-field-label">HSL</span>
-                    <span className="copy-field-value">{dispHsl}</span>
+                    <span className="copy-field-value" id="disp-hsl">{dispHsl}</span>
                     <span className="copy-icon"></span>
                 </div>
             </div>

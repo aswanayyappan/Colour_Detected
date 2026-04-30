@@ -25,8 +25,8 @@ const COLOR_NAMES: [number, number, number, string][] = [
 export function nearestColorName(r: number, g: number, b: number): string {
   let minDist = Infinity, name = 'Unknown';
   for (const [cr, cg, cb, cn] of COLOR_NAMES) {
-      const d = Math.sqrt((r-cr)**2 + (g-cg)**2 + (b-cb)**2);
-      if (d < minDist) { minDist = d; name = cn as string; }
+    const d = Math.sqrt((r-cr)**2 + (g-cg)**2 + (b-cb)**2);
+    if (d < minDist) { minDist = d; name = cn as string; }
   }
   return name;
 }
@@ -36,19 +36,17 @@ export function rgbToHex(r: number, g: number, b: number): string {
 }
 
 export function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  let rNorm = r / 255; 
-  let gNorm = g / 255; 
-  let bNorm = b / 255;
-  const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+  let rn = r/255, gn = g/255, bn = b/255;
+  const max = Math.max(rn,gn,bn), min = Math.min(rn,gn,bn);
   let h = 0, s = 0, l = (max+min)/2;
   if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
-      switch(max) {
-          case rNorm: h = ((gNorm-bNorm)/d + (gNorm<bNorm?6:0))/6; break;
-          case gNorm: h = ((bNorm-rNorm)/d + 2)/6; break;
-          case bNorm: h = ((rNorm-gNorm)/d + 4)/6; break;
-      }
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max) {
+      case rn: h = ((gn-bn)/d + (gn<bn?6:0))/6; break;
+      case gn: h = ((bn-rn)/d + 2)/6; break;
+      case bn: h = ((rn-gn)/d + 4)/6; break;
+    }
   }
   return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
 }

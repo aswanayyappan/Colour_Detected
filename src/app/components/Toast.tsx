@@ -1,20 +1,25 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface ToastProps {
     toastData: { text: string; id: number };
 }
 
 export default function Toast({ toastData }: ToastProps) {
-    const ref = useRef<HTMLDivElement>(null);
+    const [show, setShow] = useState(false);
+    const [currentMsg, setCurrentMsg] = useState('');
 
     useEffect(() => {
-        if (!toastData.text || !ref.current) return;
-        const el = ref.current;
-        el.textContent = toastData.text;
-        el.classList.add('show');
-        const t = setTimeout(() => el.classList.remove('show'), 1800);
-        return () => clearTimeout(t);
-    }, [toastData.id]);
+        if (toastData.text) {
+            setCurrentMsg(toastData.text);
+            setShow(true);
+            const timer = setTimeout(() => setShow(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [toastData]);
 
-    return <div className="toast" id="toast" ref={ref}></div>;
+    return (
+        <div className={`toast ${show ? 'show' : ''}`}>
+            {currentMsg}
+        </div>
+    );
 }

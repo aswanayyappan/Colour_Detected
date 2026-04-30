@@ -4,6 +4,8 @@ import ColorDisplay from './components/ColorDisplay';
 import HistoryPanel from './components/HistoryPanel';
 import Toast from './components/Toast';
 import { ColorData } from './utils/color';
+import '../styles/fonts.css';
+import '../styles/color-detector.css';
 
 export default function App() {
     const [currentColor, setCurrentColor] = useState<ColorData | null>(null);
@@ -23,7 +25,7 @@ export default function App() {
             if (prev.find(c => c.hex === color.hex)) return prev;
             return [{...color}, ...prev].slice(0, 20);
         });
-        showToast('Saved ' + color.hex.toUpperCase());
+        showToast(`Saved ${color.hex.toUpperCase()}`);
     }, [showToast]);
 
     const clearAll = useCallback(() => {
@@ -34,30 +36,30 @@ export default function App() {
         <div className="app-container">
             <header>
                 <h1>Colour <span>Detector</span></h1>
-                <p className="subtitle">Upload &nbsp; Click &nbsp; Extract</p>
+                <p className="subtitle">Upload &bull; Click &bull; Extract</p>
             </header>
-
+            
             <div className="container">
-                <CanvasPanel
+                <CanvasPanel 
                     onColorDetected={handleColorDetected}
                     onColorClick={() => currentColor && addToHistory(currentColor)}
                     onClear={clearAll}
                 />
-
-                <ColorDisplay
-                    color={currentColor}
+                
+                <ColorDisplay 
+                    color={currentColor} 
                     onCopy={(val) => {
                         navigator.clipboard.writeText(val);
-                        showToast('Copied ' + val);
+                        showToast(`Copied ${val}`);
                     }}
                 />
-
-                <HistoryPanel
+                
+                <HistoryPanel 
                     history={history}
                     onSelect={(c) => setCurrentColor(c)}
                 />
             </div>
-
+            
             <Toast toastData={toastData} />
         </div>
     );

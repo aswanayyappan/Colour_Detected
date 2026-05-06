@@ -60,6 +60,12 @@ export default function App() {
                 />
             </div>
             
+            <footer className="footer">
+                <div className="copyright">
+                    &copy; {new Date().getFullYear()} Colour Detector. All rights reserved.
+                </div>
+            </footer>
+            
             <Toast toastData={toastData} />
         </div>
     );

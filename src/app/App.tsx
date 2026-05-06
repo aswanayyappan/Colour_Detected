@@ -44,7 +44,10 @@ export default function App() {
                     onColorDetected={handleColorDetected}
                     onColorClick={() => currentColor && addToHistory(currentColor)}
                     onClear={clearAll}
+<<<<<<< HEAD
                     onShowToast={showToast}
+=======
+>>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
                 />
                 
                 <ColorDisplay 

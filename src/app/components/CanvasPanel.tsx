@@ -5,19 +5,12 @@ interface CanvasPanelProps {
     onColorDetected: (c: ColorData) => void;
     onColorClick: () => void;
     onClear: () => void;
-<<<<<<< HEAD
     onShowToast: (msg: string) => void;
-=======
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
 }
 
 type Mode = 'idle' | 'image' | 'live' | 'captured';
 
-<<<<<<< HEAD
 export default function CanvasPanel({ onColorDetected, onColorClick, onClear, onShowToast }: CanvasPanelProps) {
-=======
-export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: CanvasPanelProps) {
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const magCanvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -25,11 +18,8 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
     const magWrapRef = useRef<HTMLDivElement>(null);
 
     const [mode, setMode] = useState<Mode>('idle');
-<<<<<<< HEAD
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
     const [isCameraLoading, setIsCameraLoading] = useState(false);
-=======
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const requestRef = useRef<number>();
     const streamRef = useRef<MediaStream>();
@@ -78,7 +68,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         e.target.value = '';
     };
 
-<<<<<<< HEAD
     const startCamera = async (fMode: 'user' | 'environment') => {
         setIsCameraLoading(true);
         stopCamera();
@@ -103,8 +92,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         }
     };
 
-=======
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
     const toggleCamera = async () => {
         if (mode === 'live') {
             stopCamera();
@@ -114,7 +101,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                 ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
             }
         } else {
-<<<<<<< HEAD
             await startCamera(facingMode);
         }
     };
@@ -125,22 +111,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
         
         if (mode === 'live') {
             await startCamera(newMode);
-=======
-            stopCamera();
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                streamRef.current = stream;
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.play();
-                }
-                setMode('live');
-                setCapturedImage(null);
-                drawCameraToCanvas();
-            } catch(err) {
-                alert("Camera access denied or unavailable.");
-            }
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
         }
     };
 
@@ -325,7 +295,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                     id="camera-btn" 
                     className={mode === 'live' ? 'primary' : ''} 
                     onClick={toggleCamera}
-<<<<<<< HEAD
                     disabled={isCameraLoading}
                 >
                     {isCameraLoading ? 'Starting...' : 'Camera'}
@@ -338,13 +307,6 @@ export default function CanvasPanel({ onColorDetected, onColorClick, onClear }: 
                 )}
 
                 {mode === 'live' && (
-=======
-                >
-                    Camera
-                </button>
-
-                {mode === 'live' && (
->>>>>>> aa2c78227d26ddd0a731058fd6234dfafcb1d134
                     <button className="primary" onClick={captureFrame}>Capture</button>
                 )}
 

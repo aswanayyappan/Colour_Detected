@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colour Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #222;
+    --text: #f0ede8;
+    --muted: #555;
+    --accent: #ff9800;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 6vw, 4rem);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 640px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .panel-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Canvas Area */
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0d0d0d;
+    cursor: crosshair;
+    overflow: hidden;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .canvas-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .canvas-placeholder svg { opacity: 0.3; }
+  .canvas-placeholder p { font-size: 0.75rem; letter-spacing: 0.1em; }
+
+  .magnifier {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 0 0 1px #000, 0 8px 32px rgba(0,0,0,0.8);
+  }
+
+  .magnifier canvas {
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  .crosshair {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .crosshair::before,
+  .crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(197, 62, 21, 0.8);
+  }
+
+  .crosshair::before { width: 1px; height: 12px; }
+  .crosshair::after { width: 12px; height: 1px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 8px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  button.primary:hover {
+    background: #f57c00;
+    color: #000;
+  }
+
+  #file-input { display: none; }
+
+  /* Color Output Panel */
+  .color-swatch-large {
+    width: 100%;
+    aspect-ratio: 1;
+    transition: background 0.1s;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .swatch-overlay {
+    padding: 16px;
+    width: 100%;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  }
+
+  .color-name-display {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  /* Values */
+  .values-grid {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .value-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .value-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .value-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .value-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.1s;
+  }
+
+  .value-num {
+    font-size: 0.7rem;
+    color: var(--text);
+    width: 70px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Copy fields */
+  .copy-fields {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .copy-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .copy-field:hover { border-color: var(--accent); }
+
+  .copy-field-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    width: 32px;
+    flex-shrink: 0;
+  }
+
+  .copy-field-value {
+    font-size: 0.75rem;
+    flex: 1;
+    color: var(--text);
+  }
+
+  .copy-icon {
+    color: var(--muted);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .copy-field.copied {
+    border-color: var(--accent);
+  }
+
+  .copy-field.copied .copy-field-value {
+    color: var(--accent);
+  }
+
+  /* History */
+  .history-panel {
+    grid-column: 1 / -1;
+  }
+
+  .history-swatches {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+    flex-wrap: wrap;
+  }
+
+  .history-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .history-swatch:hover {
+    transform: scale(1.15);
+    z-index: 1;
+  }
+
+  .history-empty {
+    font-size: 0.7rem;
+    color: var(--muted);
+    padding: 16px;
+    letter-spacing: 0.1em;
+  }
+
+  /* Camera mode */
+  #video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .mode-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--muted);
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent);
+    color: #000;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: 2px;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Colour <span>Detector</span></h1>
+  <p class="subtitle">Upload  Click  Extract</p>
+</header>
+
+<div class="container">
+
+  <!-- Left: Image Panel -->
+  <div class="panel">
+    <div class="panel-label">// image source</div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="main-canvas"></canvas>
+      <video id="video-element" autoplay playsinline></video>
+      <div class="canvas-placeholder" id="placeholder">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="4" y="8" width="32" height="24" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="14" cy="18" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M4 28l8-7 6 6 5-4 9 9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+        <p>Upload an image or use camera</p>
+      </div>
+      <div class="magnifier" id="magnifier">
+        <canvas id="mag-canvas"></canvas>
+        <div class="crosshair"></div>
+      </div>
+      <div class="mode-badge" id="mode-badge" style="display:none">live</div>
+    </div>
+    <div class="controls">
+      <label for="file-input">
+        <button class="primary" onclick="document.getElementById('file-input').click()">Upload</button>
+      </label>
+      <input type="file" id="file-input" accept="image/*">
+      <button id="camera-btn" onclick="toggleCamera()">Camera</button>
+      <button onclick="clearAll()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Right: Color Output -->
+  <div class="panel">
+    <div class="panel-label">detected colour</div>
+    <div class="color-swatch-large" id="swatch" style="background:#1a1a1a">
+      <div class="swatch-overlay">
+        <div class="color-name-display" id="color-name"></div>
+      </div>
+    </div>
+    <div class="values-grid">
+      <div class="value-row">
+        <span class="value-label">R</span>
+        <div class="value-bar-wrap"><div class="value-bar" id="bar-r" style="width:0%;background:#ff5555"></div></div>
+        <span class="value-num" id="val-r"></span>
+      </div>
+      <div class="value-row">
+        <span class="value-label">G</span>
+        <div class="value-bar-wrap"><div class="value-bar" id="bar-g" style="width:0%;background:#55ff55"></div></div>
+        <span class="value-num" id="val-g"></span>
+      </div>
+      <div class="value-row">
+        <span class="value-label">B</span>
+        <div class="value-bar-wrap"><div class="value-bar" id="bar-b" style="width:0%;background:#5599ff"></div></div>
+        <span class="value-num" id="val-b"></span>
+      </div>
+      <div class="value-row">
+        <span class="value-label">H</span>
+        <div class="value-bar-wrap"><div class="value-bar" id="bar-h" style="width:0%;background:linear-gradient(to right,red,orange,lime,cyan,blue,magenta,red)"></div></div>
+        <span class="value-num" id="val-h"></span>
+      </div>
+    </div>
+    <div class="copy-fields">
+      <div class="copy-field" id="copy-hex" onclick="copyValue('hex')">
+        <span class="copy-field-label">HEX</span>
+        <span class="copy-field-value" id="disp-hex"></span>
+        <span class="copy-icon"></span>
+      </div>
+      <div class="copy-field" id="copy-rgb" onclick="copyValue('rgb')">
+        <span class="copy-field-label">RGB</span>
+        <span class="copy-field-value" id="disp-rgb"></span>
+        <span class="copy-icon"></span>
+      </div>
+      <div class="copy-field" id="copy-hsl" onclick="copyValue('hsl')">
+        <span class="copy-field-label">HSL</span>
+        <span class="copy-field-value" id="disp-hsl"></span>
+        <span class="copy-icon"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="panel history-panel">
+    <div class="panel-label">colour history <span style="color:#333;margin-left:8px" id="history-count">( 0 )</span></div>
+    <div class="history-swatches" id="history-swatches">
+      <span class="history-empty">No colours picked yet  hover over an image and click to sample</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const canvas = document.getElementById('main-canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const magCanvas = document.getElementById('mag-canvas');
+  const magCtx = magCanvas.getContext('2d', { willReadFrequently: true });
+  const wrap = document.getElementById('canvas-wrap');
+  const video = document.getElementById('video-element');
+  const magnifier = document.getElementById('magnifier');
+  const placeholder = document.getElementById('placeholder');
+
+  let currentColor = null;
+  let history = [];
+  let imageLoaded = false;
+  let cameraActive = false;
+  let cameraStream = null;
+  let animFrame = null;
+
+  // Named colors map (basic)
+  const COLOR_NAMES = [
+    [255,0,0,'Red'],[255,128,0,'Orange'],[255,255,0,'Orange'],
+    [128,255,0,'Lime'],[0,255,0,'Green'],[0,255,128,'Spring Green'],
+    [0,255,255,'Cyan'],[0,128,255,'Azure'],[0,0,255,'Blue'],
+    [128,0,255,'Violet'],[255,0,255,'Magenta'],[255,0,128,'Rose'],
+    [255,255,255,'White'],[0,0,0,'Black'],[128,128,128,'Gray'],
+    [192,192,192,'Silver'],[128,64,0,'Brown'],[255,200,150,'Peach'],
+    [255,150,150,'Salmon'],[150,200,255,'Sky Blue'],[200,150,255,'Lavender'],
+    [150,255,200,'Mint'],[255,230,150,'Cream'],[100,50,50,'Maroon'],
+    [50,100,50,'Dark Green'],[50,50,100,'Navy'],[200,100,50,'Sienna'],
+    [230,190,100,'Gold'],[180,140,100,'Tan']
+  ];
+
+  function nearestColorName(r, g, b) {
+    let minDist = Infinity, name = 'Unknown';
+    for (const [cr, cg, cb, cn] of COLOR_NAMES) {
+      const d = Math.sqrt((r-cr)**2 + (g-cg)**2 + (b-cb)**2);
+      if (d < minDist) { minDist = d; name = cn; }
+    }
+    return name;
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h, s, l = (max+min)/2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+      switch(max) {
+        case r: h = ((g-b)/d + (g<b?6:0))/6; break;
+        case g: h = ((b-r)/d + 2)/6; break;
+        case b: h = ((r-g)/d + 4)/6; break;
+      }
+    }
+    return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+  }
+
+  function setColor(r, g, b) {
+    const hex = rgbToHex(r, g, b);
+    const [h, s, l] = rgbToHsl(r, g, b);
+    const name = nearestColorName(r, g, b);
+
+    document.getElementById('swatch').style.background = hex;
+    document.getElementById('color-name').textContent = name;
+
+    document.getElementById('bar-r').style.width = (r/255*100) + '%';
+    document.getElementById('bar-g').style.width = (g/255*100) + '%';
+    document.getElementById('bar-b').style.width = (b/255*100) + '%';
+    document.getElementById('bar-h').style.width = (h/360*100) + '%';
+
+    const isLight = l > 55;
+    document.getElementById('color-name').style.color = isLight ? '#000' : '#fff';
+
+    document.getElementById('val-r').textContent = r;
+    document.getElementById('val-g').textContent = g;
+    document.getElementById('val-b').textContent = b;
+    document.getElementById('val-h').textContent = h + '\u00b0';
+
+    document.getElementById('disp-hex').textContent = hex.toUpperCase();
+    document.getElementById('disp-rgb').textContent = `rgb(${r}, ${g}, ${b})`;
+    document.getElementById('disp-hsl').textContent = `hsl(${h}, ${s}%, ${l}%)`;
+
+    currentColor = { r, g, b, hex, h, s, l, name };
+  }
+
+  function getCanvasCoords(e) {
+    const rect = wrap.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: Math.floor((clientX - rect.left) * scaleX),
+      y: Math.floor((clientY - rect.top) * scaleY),
+      px: clientX - rect.left,
+      py: clientY - rect.top
+    };
+  }
+
+  function samplePixel(x, y) {
+    const data = ctx.getImageData(x, y, 1, 1).data;
+    return { r: data[0], g: data[1], b: data[2] };
+  }
+
+  function drawMagnifier(cx, cy, px, py) {
+    const mag = 6;
+    const size = 80;
+    magCanvas.width = size;
+    magCanvas.height = size;
+    magCtx.imageSmoothingEnabled = false;
+    const sx = cx - Math.floor(size / mag / 2);
+    const sy = cy - Math.floor(size / mag / 2);
+    magCtx.drawImage(canvas, sx, sy, size/mag, size/mag, 0, 0, size, size);
+
+    magnifier.style.display = 'block';
+    const mw = 80, mh = 80;
+    let left = px - mw/2;
+    let top = py - mh - 15;
+    if (top < 5) top = py + 15;
+    magnifier.style.left = left + 'px';
+    magnifier.style.top = top + 'px';
+  }
+
+  wrap.addEventListener('mousemove', (e) => {
+    if (!imageLoaded && !cameraActive) return;
+    const { x, y, px, py } = getCanvasCoords(e);
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+    const { r, g, b } = samplePixel(x, y);
+    setColor(r, g, b);
+    drawMagnifier(x, y, px, py);
+  });
+
+  wrap.addEventListener('mouseleave', () => {
+    magnifier.style.display = 'none';
+  });
+
+  wrap.addEventListener('click', (e) => {
+    if (!currentColor) return;
+    addToHistory(currentColor);
+  });
+
+  wrap.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!imageLoaded && !cameraActive) return;
+    const { x, y, px, py } = getCanvasCoords(e);
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+    const { r, g, b } = samplePixel(x, y);
+    setColor(r, g, b);
+    drawMagnifier(x, y, px, py);
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', (e) => {
+    magnifier.style.display = 'none';
+    if (currentColor) addToHistory(currentColor);
+  });
+
+  function addToHistory(color) {
+    if (history.find(c => c.hex === color.hex)) return;
+    history.unshift({ ...color });
+    if (history.length > 20) history.pop();
+    renderHistory();
+    showToast('Saved ' + color.hex.toUpperCase());
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('history-swatches');
+    document.getElementById('history-count').textContent = `( ${history.length} )`;
+    if (history.length === 0) {
+      container.innerHTML = '<span class="history-empty">No colours picked yet \u2014 hover over an image and click to sample</span>';
+      return;
+    }
+    container.innerHTML = history.map((c, i) => 
+      `<div class="history-swatch" style="background:${c.hex}" title="${c.name} ${c.hex.toUpperCase()}" onclick="applyHistoryColor(${i})"></div>`
